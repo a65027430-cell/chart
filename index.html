@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>چارت و خط‌کش موقعیت</title>
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0; background: #ffffff;
+      font-family: Tahoma, Arial, sans-serif;
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+    #topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 14px; background: #f8f9fa; border-bottom: 1px solid #e0e3eb;
+      font-size: 13px; color: #131722; flex-shrink: 0;
+    }
+    .info-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge-buy {
+      background: #1e88e5; color: #fff; padding: 4px 10px;
+      border-radius: 5px; font-weight: bold; font-size: 12px;
+    }
+    .badge-sell {
+      background: #c2185b; color: #fff; padding: 4px 10px;
+      border-radius: 5px; font-weight: bold; font-size: 12px;
+    }
+    #chart-wrap { position: relative; flex: 1; width: 100%; }
+    #chart { width: 100%; height: 100%; }
+    #fitBtn {
+      position: absolute; bottom: 36px; left: 16px; z-index: 10;
+      background: #ffffff; border: 1px solid #d1d4dc; color: #131722;
+      padding: 5px 10px; border-radius: 4px; font-size: 11px;
+      font-family: Tahoma, sans-serif; cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    #fitBtn:hover { background: #f0f3fa; }
+    #levelsBar {
+      display: flex; gap: 8px; overflow-x: auto; padding: 6px 12px;
+      background: #f8f9fa; border-top: 1px solid #e0e3eb;
+      font-size: 11px; white-space: nowrap; flex-shrink: 0;
+    }
+    .lvl-chip {
+      padding: 3px 8px; border-radius: 4px; background: #fff;
+      border: 1px solid #dce1e7; color: #1e222d;
+    }
+    .lvl-chip.risk { border-color: #ef5350; color: #c62828; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <div class="info-group">
+      <span>نماد: <strong id="symTitle">---</strong></span>
+      <span>|</span>
+      <span>تایم‌فریم: <strong id="tfTitle">---</strong></span>
+      <span id="pivWrap" style="display:none;">| پیوت: <strong id="pivTitle">---</strong></span>
+    </div>
+    <div id="dirBadge"></div>
+  </div>
+
+  <div id="chart-wrap">
+    <div id="chart"></div>
+    <button id="fitBtn" onclick="chart.timeScale().fitContent()">تنظیم نمای چارت</button>
+  </div>
+
+  <div id="levelsBar"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const sym = (params.get('sym') || 'AUDCAD').toUpperCase();
+    const tf = params.get('tf') || 'M15';
+    const dir = (params.get('dir') || 'BUY').toUpperCase();
+    const piv = params.get('piv') || '';
+
+    document.title = `${sym} (${tf}) - خط‌کش موقعیت`;
+    document.getElementById('symTitle').innerText = sym;
+    document.getElementById('tfTitle').innerText = tf;
+    if (piv) {
+      document.getElementById('pivWrap').style.display = 'inline';
+      document.getElementById('pivTitle').innerText = piv;
+    }
+
+    const isBuy = dir === 'BUY';
+    const badge = document.getElementById('dirBadge');
+    badge.innerText = isBuy ? 'موقعیت خرید (BUY)' : 'موقعیت فروش (SELL)';
+    badge.className = isBuy ? 'badge-buy' : 'badge-sell';
+
+    const container = document.getElementById('chart');
+    const chart = LightweightCharts.createChart(container, {
+      layout: { background: { color: '#ffffff' }, textColor: '#191919' },
+      grid: { vertLines: { color: '#f2f4f8' }, horzLines: { color: '#f2f4f8' } },
+      rightPriceScale: { borderColor: '#d1d4dc', autoScale: true },
+      timeScale: { borderColor: '#d1d4dc', timeVisible: true, secondsVisible: false, rightOffset: 12 },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#228b22', downColor: '#dc143c',
+      borderVisible: false, wickUpColor: '#228b22', wickDownColor: '#dc143c'
+    });
+
+    // تشخیص خودکار تعداد اعشار نماد برای نمایش دقیق قیمت‌ها
+    let precision = 5;
+    if (sym.includes('JPY')) precision = 3;
+    else if (sym.includes('XAU') || sym.includes('GOLD') || sym.includes('US30') || sym.includes('NAS') || sym.includes('SPX') || sym.includes('OIL')) precision = 2;
+    else if (sym.includes('XAG')) precision = 3;
+
+    candleSeries.applyOptions({
+      priceFormat: { type: 'price', precision: precision, minMove: Math.pow(10, -precision) }
+    });
+
+    // بازسازی کندل‌های ارسالی از متاتریدر
+    const rawCandles = params.get('c');
+    if (rawCandles) {
+      const parsed = rawCandles.split(';').map(row => {
+        const p = row.split(',');
+        return {
+          time: parseInt(p[0], 10),
+          open: parseFloat(p[1]),
+          high: parseFloat(p[2]),
+          low: parseFloat(p[3]),
+          close: parseFloat(p[4])
+        };
+      }).filter(item => !isNaN(item.time) && !isNaN(item.close));
+
+      if (parsed.length > 0) {
+        candleSeries.setData(parsed);
+        chart.timeScale().fitContent();
+      }
+    }
+
+    const stepColor = isBuy ? '#1e88e5' : '#c2185b';
+    const levelsBar = document.getElementById('levelsBar');
+
+    // رسم خط‌کش پله‌های ۱ تا ۷
+    for (let i = 1; i <= 7; i++) {
+      const val = parseFloat(params.get('s' + i));
+      if (!isNaN(val) && val > 0) {
+        candleSeries.createPriceLine({
+          price: val,
+          color: stepColor,
+          lineWidth: 2,
+          lineStyle: LightweightCharts.LineStyle.Solid,
+          axisLabelVisible: true,
+          title: 'پله ' + i,
+        });
+
+        const chip = document.createElement('div');
+        chip.className = 'lvl-chip';
+        chip.innerHTML = `<strong>پله ${i}:</strong> ${val.toFixed(precision)}`;
+        levelsBar.appendChild(chip);
+      }
+    }
+
+    // رسم خطوط ریسک‌فری (RF 2 تا RF 7)
+    for (let i = 2; i <= 7; i++) {
+      const rfVal = parseFloat(params.get('rf' + i));
+      if (!isNaN(rfVal) && rfVal > 0) {
+        candleSeries.createPriceLine({
+          price: rfVal,
+          color: '#b8860b',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'RF ' + i,
+        });
+      }
+    }
+
+    // رسم خط حد ریسک
+    const riskVal = parseFloat(params.get('risk'));
+    if (!isNaN(riskVal) && riskVal > 0) {
+      candleSeries.createPriceLine({
+        price: riskVal,
+        color: '#d32f2f',
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.LargeDashed,
+        axisLabelVisible: true,
+        title: 'حد ریسک',
+      });
+
+      const rChip = document.createElement('div');
+      rChip.className = 'lvl-chip risk';
+      rChip.innerHTML = `حد ریسک: ${riskVal.toFixed(precision)}`;
+      levelsBar.appendChild(rChip);
+    }
+
+    window.addEventListener('resize', () => {
+      chart.resize(container.clientWidth, container.clientHeight);
+    });
+  </script>
+</body>
+</html>
