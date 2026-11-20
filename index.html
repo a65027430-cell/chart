@@ -92,7 +92,7 @@
       <span id="pivWrap" style="display:none;">| پیوت: <strong id="pivTitle">---</strong></span>
     </div>
     <div class="info-group">
-      <a id="openFullMt5" href="https://trade.mql5.com/trade" target="_blank" class="direct-mt5-btn">تمام‌صفحه متاتریدر ۵</a>
+      <a id="openFullMt5" href="https://trade.mql5.com/trade?version=5" target="_blank" class="direct-mt5-btn">تمام‌صفحه متاتریدر ۵</a>
       <div id="dirBadge"></div>
     </div>
   </div>
@@ -110,7 +110,7 @@
       <div id="rulerList" class="ruler-visual"></div>
       <div class="hint-box">
         • برای کپی کردن هر عدد روی خط آن کلیک کنید.<br>
-        • در کادر سمت چپ وارد اکانت متاتریدر ۵ شوید تا چارت زنده بروکر شما نمایش داده شود.
+        • برای ساخت حساب دموی رایگان در متاتریدر ۵، سرور <b>MetaQuotes-Demo</b> را انتخاب کنید.
       </div>
     </div>
   </div>
@@ -135,8 +135,8 @@
     badge.innerText = isBuy ? 'خرید (BUY)' : 'فروش (SELL)';
     badge.className = isBuy ? 'badge-buy' : 'badge-sell';
 
-    // اتصال مستقیم به وب‌سایت رسمی متاتریدر ۵ با نماد و تایم‌فریم سیگنال
-    const mt5Url = `https://trade.mql5.com/trade?servers=&trade_server=&symbol=${encodeURIComponent(sym)}&period=${encodeURIComponent(tf)}`;
+    // اجبار به باز شدن نسخه متاتریدر ۵ (version=5)
+    const mt5Url = `https://trade.mql5.com/trade?version=5&servers=MetaQuotes-Demo&trade_server=MetaQuotes-Demo&symbol=${encodeURIComponent(sym)}&period=${encodeURIComponent(tf)}`;
     document.getElementById('mt5Frame').src = mt5Url;
     document.getElementById('openFullMt5').href = mt5Url;
 
@@ -165,7 +165,6 @@
       items.push({ type: 'risk', label: 'حد ریسک', price: riskVal });
     }
 
-    // مرتب‌سازی خطوط بر اساس قیمت از بالا به پایین دقیقاً مثل چارت
     items.sort((a, b) => b.price - a.price);
 
     function copyPrice(valStr) {
