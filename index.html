@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>متاتریدر ۵ وب + خط‌کش موقعیت</title>
+  <title>چارت زنده تردینگ‌ویو + خط‌کش موقعیت</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -25,21 +25,14 @@
       background: #c2185b; color: #fff; padding: 4px 10px;
       border-radius: 5px; font-weight: bold; font-size: 12px;
     }
-    .direct-mt5-btn {
-      background: #22c55e; color: #fff; text-decoration: none;
-      padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold;
-    }
     #workspace {
-      display: flex; flex: 1; width: 100%; height: calc(100vh - 42px); overflow: hidden;
+      display: flex; flex: 1; width: 100%; height: calc(100vh - 40px); overflow: hidden;
     }
-    #mt5-frame-wrap {
-      flex: 1; height: 100%; position: relative; background: #f8f9fa;
-    }
-    #mt5Frame {
-      width: 100%; height: 100%; border: none;
+    #tv-container {
+      flex: 1; height: 100%;
     }
     #ruler-sidebar {
-      width: 310px; background: #f8f9fa; border-right: 2px solid #d1d4dc;
+      width: 290px; background: #f8f9fa; border-right: 2px solid #d1d4dc;
       display: flex; flex-direction: column; overflow-y: auto; padding: 10px;
       flex-shrink: 0;
     }
@@ -49,37 +42,21 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     .ruler-visual {
-      background: #ffffff; border: 1px solid #d1d4dc; border-radius: 6px;
-      padding: 8px; margin-bottom: 10px;
+      background: #ffffff; border: 1px solid #d1d4dc; border-radius: 6px; padding: 8px;
     }
     .r-line {
       display: flex; justify-content: space-between; align-items: center;
       padding: 5px 8px; margin: 4px 0; border-radius: 4px; font-size: 12px;
-      cursor: pointer; transition: 0.15s;
+      cursor: pointer;
     }
-    .r-line:hover { opacity: 0.85; }
-    .r-step-buy {
-      border-right: 4px solid #1e88e5; background: #eef6ff; color: #0d47a1;
-    }
-    .r-step-sell {
-      border-right: 4px solid #c2185b; background: #fceef5; color: #880e4f;
-    }
-    .r-rf {
-      border-right: 4px dashed #b8860b; background: #fffbeb; color: #785500; font-size: 11px;
-    }
-    .r-risk {
-      border-right: 4px solid #d32f2f; background: #ffebee; color: #b71c1c; font-weight: bold;
-    }
-    .copy-tag {
-      font-size: 10px; background: rgba(0,0,0,0.08); padding: 2px 5px; border-radius: 3px;
-    }
-    .hint-box {
-      font-size: 11px; color: #555; background: #fff; border: 1px solid #e0e3eb;
-      padding: 7px; border-radius: 5px; line-height: 1.6;
-    }
+    .r-step-buy { border-right: 4px solid #1e88e5; background: #eef6ff; color: #0d47a1; }
+    .r-step-sell { border-right: 4px solid #c2185b; background: #fceef5; color: #880e4f; }
+    .r-rf { border-right: 4px dashed #b8860b; background: #fffbeb; color: #785500; font-size: 11px; }
+    .r-risk { border-right: 4px solid #d32f2f; background: #ffebee; color: #b71c1c; font-weight: bold; }
+    .copy-tag { font-size: 10px; background: rgba(0,0,0,0.08); padding: 2px 5px; border-radius: 3px; }
     @media (max-width: 768px) {
       #workspace { flex-direction: column; }
-      #ruler-sidebar { width: 100%; height: 42%; border-right: none; border-top: 2px solid #d1d4dc; }
+      #ruler-sidebar { width: 100%; height: 40%; border-right: none; border-top: 2px solid #d1d4dc; }
     }
   </style>
 </head>
@@ -91,30 +68,21 @@
       <span>تایم‌فریم: <strong id="tfTitle">---</strong></span>
       <span id="pivWrap" style="display:none;">| پیوت: <strong id="pivTitle">---</strong></span>
     </div>
-    <div class="info-group">
-      <a id="openFullMt5" href="https://trade.mql5.com/trade?version=5" target="_blank" class="direct-mt5-btn">تمام‌صفحه متاتریدر ۵</a>
-      <div id="dirBadge"></div>
-    </div>
+    <div id="dirBadge"></div>
   </div>
 
   <div id="workspace">
-    <div id="mt5-frame-wrap">
-      <iframe id="mt5Frame" allow="clipboard-read; clipboard-write"></iframe>
-    </div>
-
+    <div id="tv-container"></div>
     <div id="ruler-sidebar">
       <div class="sidebar-title">
-        <span>خط‌کش پله‌ها و ریسک‌فری</span>
+        <span>پله‌ها و ریسک‌فری</span>
         <span id="copyStatus" style="font-size:11px; color:#228b22;"></span>
       </div>
       <div id="rulerList" class="ruler-visual"></div>
-      <div class="hint-box">
-        • برای کپی کردن هر عدد روی خط آن کلیک کنید.<br>
-        • برای ساخت حساب دموی رایگان در متاتریدر ۵، سرور <b>MetaQuotes-Demo</b> را انتخاب کنید.
-      </div>
     </div>
   </div>
 
+  <script src="https://s3.tradingview.com/tv.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const sym = (params.get('sym') || 'AUDCAD').toUpperCase();
@@ -122,7 +90,7 @@
     const dir = (params.get('dir') || 'BUY').toUpperCase();
     const piv = params.get('piv') || '';
 
-    document.title = `${sym} (${tf}) - متاتریدر ۵ و خط‌کش`;
+    document.title = `${sym} (${tf}) - چارت زنده`;
     document.getElementById('symTitle').innerText = sym;
     document.getElementById('tfTitle').innerText = tf;
     if (piv) {
@@ -135,10 +103,36 @@
     badge.innerText = isBuy ? 'خرید (BUY)' : 'فروش (SELL)';
     badge.className = isBuy ? 'badge-buy' : 'badge-sell';
 
-    // اجبار به باز شدن نسخه متاتریدر ۵ (version=5)
-    const mt5Url = `https://trade.mql5.com/trade?version=5&servers=MetaQuotes-Demo&trade_server=MetaQuotes-Demo&symbol=${encodeURIComponent(sym)}&period=${encodeURIComponent(tf)}`;
-    document.getElementById('mt5Frame').src = mt5Url;
-    document.getElementById('openFullMt5').href = mt5Url;
+    function mapTVSymbol(s) {
+      if (s === 'XAUUSD') return 'OANDA:XAUUSD';
+      if (s === 'XAGUSD') return 'OANDA:XAGUSD';
+      if (s === 'USOIL')  return 'TVC:USOIL';
+      if (s === 'US30')   return 'FOREXCOM:DJI';
+      if (s === 'NAS100') return 'FOREXCOM:NSXUSD';
+      if (s === 'SPX500') return 'FOREXCOM:SPXUSD';
+      if (s.length === 6) return 'FX:' + s;
+      return s;
+    }
+
+    function mapTVInterval(t) {
+      const m = { 'M1': '1', 'M5': '5', 'M15': '15', 'M30': '30', 'H1': '60', 'H4': '240', 'D1': 'D' };
+      return m[t] || '15';
+    }
+
+    new TradingView.widget({
+      "autosize": true,
+      "symbol": mapTVSymbol(sym),
+      "interval": mapTVInterval(tf),
+      "timezone": "Etc/UTC",
+      "theme": "light",
+      "style": "1",
+      "locale": "en",
+      "toolbar_bg": "#f1f3f6",
+      "enable_publishing": false,
+      "hide_side_toolbar": false,
+      "allow_symbol_change": true,
+      "container_id": "tv-container"
+    });
 
     let precision = 5;
     if (sym.includes('JPY')) precision = 3;
@@ -147,23 +141,16 @@
 
     const rulerList = document.getElementById('rulerList');
     const items = [];
-
     for (let i = 1; i <= 7; i++) {
       const val = parseFloat(params.get('s' + i));
-      if (!isNaN(val) && val > 0) {
-        items.push({ type: 'step', label: `پله ${i}`, price: val });
-      }
+      if (!isNaN(val) && val > 0) items.push({ type: 'step', label: `پله ${i}`, price: val });
     }
     for (let i = 2; i <= 7; i++) {
       const rfVal = parseFloat(params.get('rf' + i));
-      if (!isNaN(rfVal) && rfVal > 0) {
-        items.push({ type: 'rf', label: `تی‌پی / RF ${i}`, price: rfVal });
-      }
+      if (!isNaN(rfVal) && rfVal > 0) items.push({ type: 'rf', label: `تی‌پی / RF ${i}`, price: rfVal });
     }
     const riskVal = parseFloat(params.get('risk'));
-    if (!isNaN(riskVal) && riskVal > 0) {
-      items.push({ type: 'risk', label: 'حد ریسک', price: riskVal });
-    }
+    if (!isNaN(riskVal) && riskVal > 0) items.push({ type: 'risk', label: 'حد ریسک', price: riskVal });
 
     items.sort((a, b) => b.price - a.price);
 
@@ -176,11 +163,7 @@
 
     items.forEach(it => {
       const row = document.createElement('div');
-      let cls = 'r-line ';
-      if (it.type === 'step') cls += isBuy ? 'r-step-buy' : 'r-step-sell';
-      else if (it.type === 'rf') cls += 'r-rf';
-      else cls += 'r-risk';
-
+      let cls = 'r-line ' + (it.type === 'step' ? (isBuy ? 'r-step-buy' : 'r-step-sell') : (it.type === 'rf' ? 'r-rf' : 'r-risk'));
       const pStr = it.price.toFixed(precision);
       row.className = cls;
       row.onclick = () => copyPrice(pStr);
