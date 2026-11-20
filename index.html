@@ -42,17 +42,17 @@
     #fitBtn {
       position: absolute; bottom: 36px; left: 16px; z-index: 10;
       background: #ffffff; border: 1px solid #d1d4dc; color: #131722;
-      padding: 5px 10px; border-radius: 4px; font-size: 11px;
+      padding: 6px 12px; border-radius: 4px; font-size: 11px;
       font-family: Tahoma, sans-serif; cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.08);
     }
     #levelsBar {
-      display: flex; gap: 8px; overflow-x: auto; padding: 6px 12px;
+      display: flex; gap: 8px; overflow-x: auto; padding: 7px 12px;
       background: #f8f9fa; border-top: 1px solid #e0e3eb;
       font-size: 11px; white-space: nowrap; flex-shrink: 0;
     }
     .lvl-chip {
-      padding: 3px 8px; border-radius: 4px; background: #fff;
+      padding: 4px 9px; border-radius: 4px; background: #fff;
       border: 1px solid #dce1e7; color: #1e222d;
     }
     .lvl-chip.rf { border-color: #d4a017; color: #8a6400; }
@@ -73,7 +73,7 @@
   </div>
 
   <div id="chart-wrap">
-    <div id="statusMsg">در حال دریافت ۲۵۰ کندل زنده...</div>
+    <div id="statusMsg">در حال بارگذاری سریع چارت...</div>
     <div id="chart"></div>
     <button id="fitBtn" onclick="resetChartZoom()">نمایش ۲۵۰ کندل</button>
   </div>
@@ -86,7 +86,6 @@
     const tf = (params.get('tf') || 'M15').toUpperCase();
     const dir = (params.get('dir') || 'BUY').toUpperCase();
     const piv = params.get('piv') || '';
-    const pivTime = parseInt(params.get('pt') || '0', 10);
 
     document.title = `${sym} (${tf}) - چارت زنده و خط‌کش`;
     document.getElementById('symTitle').innerText = sym;
@@ -104,9 +103,9 @@
     const container = document.getElementById('chart');
     const chart = LightweightCharts.createChart(container, {
       layout: { background: { color: '#ffffff' }, textColor: '#131722' },
-      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-      rightPriceScale: { borderColor: '#d1d4dc', autoScale: true, scaleMargins: { top: 0.08, bottom: 0.08 } },
-      timeScale: { borderColor: '#d1d4dc', timeVisible: true, secondsVisible: false, rightOffset: 55, barSpacing: 4.5 },
+      grid: { vertLines: { color: '#f3f5f9' }, horzLines: { color: '#f3f5f9' } },
+      rightPriceScale: { borderColor: '#d1d4dc', autoScale: true, scaleMargins: { top: 0.06, bottom: 0.06 } },
+      timeScale: { borderColor: '#d1d4dc', timeVisible: true, secondsVisible: false, rightOffset: 25, barSpacing: 4.5 },
       crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
     });
 
@@ -129,11 +128,21 @@
     const rfColor = '#b8860b';
     const levelsBar = document.getElementById('levelsBar');
 
-    const steps = [];
+    // رسم قطعی و تضمینی خط‌کش روی چارت (پله ۱ تا ۷)
+    const allPrices = [];
     for (let i = 1; i <= 7; i++) {
       const val = parseFloat(params.get('s' + i));
       if (!isNaN(val) && val > 0) {
-        steps.push({ index: i, price: val });
+        allPrices.push(val);
+        candleSeries.createPriceLine({
+          price: val,
+          color: stepColor,
+          lineWidth: 2,
+          lineStyle: LightweightCharts.LineStyle.Solid,
+          axisLabelVisible: true,
+          title: `پله ${i}`
+        });
+
         const chip = document.createElement('div');
         chip.className = 'lvl-chip';
         chip.innerHTML = `<strong>پله ${i}:</strong> ${val.toFixed(precision)}`;
@@ -141,180 +150,111 @@
       }
     }
 
-    const rfs = [];
+    // رسم قطعی خطوط تی‌پی / ریسک‌فری (RF 2 تا RF 7)
     for (let i = 2; i <= 7; i++) {
       const rfVal = parseFloat(params.get('rf' + i));
       if (!isNaN(rfVal) && rfVal > 0) {
-        rfs.push({ index: i, price: rfVal });
+        allPrices.push(rfVal);
+        candleSeries.createPriceLine({
+          price: rfVal,
+          color: rfColor,
+          lineWidth: 2,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `تی‌پی / RF ${i}`
+        });
+
         const rfChip = document.createElement('div');
         rfChip.className = 'lvl-chip rf';
-        rfChip.innerHTML = `<strong>تی‌پی/RF ${i}:</strong> ${rfVal.toFixed(precision)}`;
+        rfChip.innerHTML = `<strong>تی‌پی / RF ${i}:</strong> ${rfVal.toFixed(precision)}`;
         levelsBar.appendChild(rfChip);
       }
     }
 
+    // رسم خط حد ریسک
     const riskVal = parseFloat(params.get('risk'));
     if (!isNaN(riskVal) && riskVal > 0) {
+      candleSeries.createPriceLine({
+        price: riskVal,
+        color: '#d32f2f',
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.LargeDashed,
+        axisLabelVisible: true,
+        title: 'حد ریسک'
+      });
+
       const rChip = document.createElement('div');
       rChip.className = 'lvl-chip risk';
       rChip.innerHTML = `حد ریسک: ${riskVal.toFixed(precision)}`;
       levelsBar.appendChild(rChip);
     }
 
-    function mapYahooSymbol(s) {
-      if (s === 'XAUUSD') return 'GC=F';
-      if (s === 'XAGUSD') return 'SI=F';
-      if (s === 'USOIL')  return 'CL=F';
-      if (s === 'US30')   return '^DJI';
-      if (s === 'NAS100') return '^NDX';
-      if (s === 'SPX500') return '^GSPC';
-      if (s.length === 6) return s + '=X';
-      return s;
+    // تنظیم مقیاس عمودی چارت طوری که پله‌ها همیشه داخل کادر دیده شوند
+    if (allPrices.length > 0) {
+      const minStep = Math.min(...allPrices);
+      const maxStep = Math.max(...allPrices);
+      candleSeries.applyOptions({
+        autoscaleInfoProvider: original => {
+          const res = original();
+          if (res !== null) {
+            res.priceRange.minValue = Math.min(res.priceRange.minValue, minStep);
+            res.priceRange.maxValue = Math.max(res.priceRange.maxValue, maxStep);
+          }
+          return res;
+        }
+      });
     }
 
-    function mapYahooInterval(t) {
-      const map = { 'M1': '1m', 'M5': '5m', 'M15': '15m', 'M30': '30m', 'H1': '60m', 'H4': '1h', 'D1': '1d' };
-      return map[t] || '15m';
+    // تبدیل نماد و تایم‌فریم برای دریافت سریع دیتای کندلی
+    function getBinanceOrYahooConfig(s, t) {
+      const yMap = { 'M1': '1m', 'M5': '5m', 'M15': '15m', 'M30': '30m', 'H1': '60m', 'H4': '1h', 'D1': '1d' };
+      let ySym = s.length === 6 ? s + '=X' : s;
+      if (s === 'XAUUSD') ySym = 'GC=F';
+      else if (s === 'XAGUSD') ySym = 'SI=F';
+      else if (s === 'USOIL') ySym = 'CL=F';
+      else if (s === 'US30') ySym = '^DJI';
+      else if (s === 'NAS100') ySym = '^NDX';
+      else if (s === 'SPX500') ySym = '^GSPC';
+      return { ySym, yInt: yMap[t] || '15m' };
     }
 
-    function getStepSeconds(t) {
-      const map = { 'M1': 60, 'M5': 300, 'M15': 900, 'M30': 1800, 'H1': 3600, 'H4': 14400, 'D1': 86400 };
-      return map[t] || 900;
-    }
-
-    let rulerDrawn = false;
     let totalCandlesCount = 250;
-
-    // رسم خط‌کش بزرگ‌تر (عرض ۷۰ کندل) همراه با برچسب متنی روی هر خط
-    function drawMT5StyleRuler(candles) {
-      if (rulerDrawn || candles.length === 0) return;
-      rulerDrawn = true;
-
-      const tfSec = getStepSeconds(tf);
-      const lastTime = candles[candles.length - 1].time;
-      let startTime = pivTime > 0 ? pivTime : candles[Math.max(0, candles.length - 18)].time;
-      if (startTime > lastTime || startTime < candles[0].time) {
-        startTime = candles[Math.max(0, candles.length - 12)].time;
-      }
-
-      const rulerBarsWidth = 70;
-      const endTime = startTime + (rulerBarsWidth * tfSec);
-      const labelTime = startTime + (Math.floor(rulerBarsWidth * 0.65) * tfSec);
-
-      // رسم پله‌های ۱ تا آخر
-      steps.forEach(st => {
-        const line = chart.addLineSeries({
-          color: stepColor,
-          lineWidth: 2,
-          lineStyle: LightweightCharts.LineStyle.Solid,
-          lastValueVisible: true,
-          priceLineVisible: false,
-          crosshairMarkerVisible: false,
-          title: 'پله ' + st.index
-        });
-        line.setData([
-          { time: startTime, value: st.price },
-          { time: labelTime, value: st.price },
-          { time: endTime, value: st.price }
-        ]);
-        line.setMarkers([
-          {
-            time: labelTime,
-            position: isBuy ? 'belowBar' : 'aboveBar',
-            color: stepColor,
-            shape: 'circle',
-            size: 0,
-            text: `پله ${st.index} (${st.price.toFixed(precision)})`
-          }
-        ]);
-      });
-
-      // رسم خطوط ریسک‌فری و تی‌پی‌ها
-      rfs.forEach(rf => {
-        const line = chart.addLineSeries({
-          color: rfColor,
-          lineWidth: 2,
-          lineStyle: LightweightCharts.LineStyle.Dashed,
-          lastValueVisible: true,
-          priceLineVisible: false,
-          crosshairMarkerVisible: false,
-          title: 'TP/RF ' + rf.index
-        });
-        line.setData([
-          { time: startTime, value: rf.price },
-          { time: labelTime, value: rf.price },
-          { time: endTime, value: rf.price }
-        ]);
-        line.setMarkers([
-          {
-            time: startTime + (Math.floor(rulerBarsWidth * 0.25) * tfSec),
-            position: isBuy ? 'aboveBar' : 'belowBar',
-            color: rfColor,
-            shape: 'circle',
-            size: 0,
-            text: `تی‌پی / ریسک‌فری ${rf.index} (${rf.price.toFixed(precision)})`
-          }
-        ]);
-      });
-    }
 
     function resetChartZoom() {
       const fromIdx = Math.max(0, totalCandlesCount - 250);
-      chart.timeScale().setVisibleLogicalRange({ from: fromIdx, to: totalCandlesCount + 65 });
+      chart.timeScale().setVisibleLogicalRange({ from: fromIdx, to: totalCandlesCount + 20 });
     }
 
-    async function fetchSingleEndpoint(url) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 7000);
-      try {
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error('HTTP error');
-        const data = await res.json();
-        if (data && data.chart && data.chart.result && data.chart.result[0]) {
-          return data.chart.result[0];
-        }
-        throw new Error('Invalid JSON');
-      } catch (e) {
-        clearTimeout(timer);
-        throw e;
-      }
-    }
-
-    // ارسال موازی به ۳ سرور برای باز شدن سریع در کسری از ثانیه
-    async function fetchYahooFast(targetUrl) {
-      const endpoints = [
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-      ];
-      try {
-        return await Promise.any(endpoints.map(ep => fetchSingleEndpoint(ep)));
-      } catch (e) {
-        return null;
-      }
-    }
-
-    async function fetchLiveCandles(isFirstLoad) {
-      const ySym = encodeURIComponent(mapYahooSymbol(sym));
-      const yInt = mapYahooInterval(tf);
+    async function fetchFastCandles(isFirst) {
+      const cfg = getBinanceOrYahooConfig(sym, tf);
       const range = (tf === 'M1') ? '1d' : (tf === 'M5' || tf === 'M15' ? '5d' : '1mo');
-      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ySym}?interval=${yInt}&range=${range}&_=${Date.now()}`;
+      const rawUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cfg.ySym)}?interval=${cfg.yInt}&range=${range}&_=${Date.now()}`;
 
-      const result = await fetchYahooFast(targetUrl);
-      if (result && result.timestamp) {
-        const timestamps = result.timestamp;
-        const quote = result.indicators.quote[0];
+      const proxies = [
+        `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rawUrl)}`,
+        `https://thingproxy.freeboard.io/fetch/${rawUrl}`
+      ];
 
+      try {
+        const res = await Promise.any(proxies.map(u => fetch(u).then(r => {
+          if (!r.ok) throw new Error('err');
+          return r.json();
+        })));
+
+        const result = res.chart.result[0];
+        const ts = result.timestamp;
+        const q = result.indicators.quote[0];
         const candles = [];
-        for (let i = 0; i < timestamps.length; i++) {
-          if (quote.open[i] !== null && quote.close[i] !== null) {
+
+        for (let i = 0; i < ts.length; i++) {
+          if (q.open[i] !== null && q.close[i] !== null) {
             candles.push({
-              time: timestamps[i],
-              open: quote.open[i],
-              high: quote.high[i],
-              low: quote.low[i],
-              close: quote.close[i]
+              time: ts[i],
+              open: q.open[i],
+              high: q.high[i],
+              low: q.low[i],
+              close: q.close[i]
             });
           }
         }
@@ -324,17 +264,17 @@
           totalCandlesCount = last250.length;
           candleSeries.setData(last250);
           document.getElementById('statusMsg').style.display = 'none';
-
-          if (isFirstLoad) {
-            drawMT5StyleRuler(last250);
-            resetChartZoom();
-          }
+          if (isFirst) resetChartZoom();
+        }
+      } catch (e) {
+        if (isFirst) {
+          document.getElementById('statusMsg').innerText = 'در حال همگام‌سازی کندل‌ها...';
         }
       }
     }
 
-    fetchLiveCandles(true);
-    setInterval(() => fetchLiveCandles(false), 5000);
+    fetchFastCandles(true);
+    setInterval(() => fetchFastCandles(false), 4000);
 
     window.addEventListener('resize', () => {
       chart.resize(container.clientWidth, container.clientHeight);
