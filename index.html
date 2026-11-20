@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>چارت زنده و خط‌کش موقعیت</title>
-  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <title>متاتریدر ۵ وب + خط‌کش موقعیت</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -14,8 +13,8 @@
     }
     #topbar {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 14px; background: #f8f9fa; border-bottom: 1px solid #e0e3eb;
-      font-size: 13px; color: #131722; flex-shrink: 0;
+      padding: 7px 14px; background: #1e222d; color: #ffffff;
+      font-size: 13px; flex-shrink: 0;
     }
     .info-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .badge-buy {
@@ -26,52 +25,95 @@
       background: #c2185b; color: #fff; padding: 4px 10px;
       border-radius: 5px; font-weight: bold; font-size: 12px;
     }
-    .live-dot {
-      display: inline-block; width: 8px; height: 8px; background: #22c55e;
-      border-radius: 50%; margin-left: 5px; animation: pulse 1.5s infinite;
+    .direct-mt5-btn {
+      background: #22c55e; color: #fff; text-decoration: none;
+      padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold;
     }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    #chart-wrap { position: relative; flex: 1; width: 100%; }
-    #chart { width: 100%; height: 100%; }
-    #fitBtn {
-      position: absolute; bottom: 36px; left: 16px; z-index: 10;
-      background: #ffffff; border: 1px solid #d1d4dc; color: #131722;
-      padding: 6px 12px; border-radius: 4px; font-size: 11px;
-      font-family: Tahoma, sans-serif; cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    #workspace {
+      display: flex; flex: 1; width: 100%; height: calc(100vh - 42px); overflow: hidden;
     }
-    #levelsBar {
-      display: flex; gap: 8px; overflow-x: auto; padding: 7px 12px;
-      background: #f8f9fa; border-top: 1px solid #e0e3eb;
-      font-size: 11px; white-space: nowrap; flex-shrink: 0;
+    #mt5-frame-wrap {
+      flex: 1; height: 100%; position: relative; background: #f8f9fa;
     }
-    .lvl-chip {
-      padding: 4px 9px; border-radius: 4px; background: #fff;
-      border: 1px solid #dce1e7; color: #1e222d;
+    #mt5Frame {
+      width: 100%; height: 100%; border: none;
     }
-    .lvl-chip.rf { border-color: #d4a017; color: #8a6400; }
-    .lvl-chip.risk { border-color: #ef5350; color: #c62828; font-weight: bold; }
+    #ruler-sidebar {
+      width: 310px; background: #f8f9fa; border-right: 2px solid #d1d4dc;
+      display: flex; flex-direction: column; overflow-y: auto; padding: 10px;
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      font-size: 13px; font-weight: bold; color: #131722;
+      padding-bottom: 8px; border-bottom: 1px solid #d1d4dc; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .ruler-visual {
+      background: #ffffff; border: 1px solid #d1d4dc; border-radius: 6px;
+      padding: 8px; margin-bottom: 10px;
+    }
+    .r-line {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 8px; margin: 4px 0; border-radius: 4px; font-size: 12px;
+      cursor: pointer; transition: 0.15s;
+    }
+    .r-line:hover { opacity: 0.85; }
+    .r-step-buy {
+      border-right: 4px solid #1e88e5; background: #eef6ff; color: #0d47a1;
+    }
+    .r-step-sell {
+      border-right: 4px solid #c2185b; background: #fceef5; color: #880e4f;
+    }
+    .r-rf {
+      border-right: 4px dashed #b8860b; background: #fffbeb; color: #785500; font-size: 11px;
+    }
+    .r-risk {
+      border-right: 4px solid #d32f2f; background: #ffebee; color: #b71c1c; font-weight: bold;
+    }
+    .copy-tag {
+      font-size: 10px; background: rgba(0,0,0,0.08); padding: 2px 5px; border-radius: 3px;
+    }
+    .hint-box {
+      font-size: 11px; color: #555; background: #fff; border: 1px solid #e0e3eb;
+      padding: 7px; border-radius: 5px; line-height: 1.6;
+    }
+    @media (max-width: 768px) {
+      #workspace { flex-direction: column; }
+      #ruler-sidebar { width: 100%; height: 42%; border-right: none; border-top: 2px solid #d1d4dc; }
+    }
   </style>
 </head>
 <body>
   <div id="topbar">
     <div class="info-group">
-      <span><span class="live-dot"></span>زنده</span>
-      <span>|</span>
       <span>نماد: <strong id="symTitle">---</strong></span>
       <span>|</span>
       <span>تایم‌فریم: <strong id="tfTitle">---</strong></span>
       <span id="pivWrap" style="display:none;">| پیوت: <strong id="pivTitle">---</strong></span>
     </div>
-    <div id="dirBadge"></div>
+    <div class="info-group">
+      <a id="openFullMt5" href="https://trade.mql5.com/trade" target="_blank" class="direct-mt5-btn">تمام‌صفحه متاتریدر ۵</a>
+      <div id="dirBadge"></div>
+    </div>
   </div>
 
-  <div id="chart-wrap">
-    <div id="chart"></div>
-    <button id="fitBtn" onclick="resetChartZoom()">نمایش ۲۵۰ کندل</button>
-  </div>
+  <div id="workspace">
+    <div id="mt5-frame-wrap">
+      <iframe id="mt5Frame" allow="clipboard-read; clipboard-write"></iframe>
+    </div>
 
-  <div id="levelsBar"></div>
+    <div id="ruler-sidebar">
+      <div class="sidebar-title">
+        <span>خط‌کش پله‌ها و ریسک‌فری</span>
+        <span id="copyStatus" style="font-size:11px; color:#228b22;"></span>
+      </div>
+      <div id="rulerList" class="ruler-visual"></div>
+      <div class="hint-box">
+        • برای کپی کردن هر عدد روی خط آن کلیک کنید.<br>
+        • در کادر سمت چپ وارد اکانت متاتریدر ۵ شوید تا چارت زنده بروکر شما نمایش داده شود.
+      </div>
+    </div>
+  </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -80,7 +122,7 @@
     const dir = (params.get('dir') || 'BUY').toUpperCase();
     const piv = params.get('piv') || '';
 
-    document.title = `${sym} (${tf}) - چارت زنده و خط‌کش`;
+    document.title = `${sym} (${tf}) - متاتریدر ۵ و خط‌کش`;
     document.getElementById('symTitle').innerText = sym;
     document.getElementById('tfTitle').innerText = tf;
     if (piv) {
@@ -90,200 +132,61 @@
 
     const isBuy = dir === 'BUY';
     const badge = document.getElementById('dirBadge');
-    badge.innerText = isBuy ? 'موقعیت خرید (BUY)' : 'موقعیت فروش (SELL)';
+    badge.innerText = isBuy ? 'خرید (BUY)' : 'فروش (SELL)';
     badge.className = isBuy ? 'badge-buy' : 'badge-sell';
 
-    const container = document.getElementById('chart');
-    const chart = LightweightCharts.createChart(container, {
-      layout: { background: { color: '#ffffff' }, textColor: '#131722' },
-      grid: { vertLines: { color: '#f3f5f9' }, horzLines: { color: '#f3f5f9' } },
-      rightPriceScale: { borderColor: '#d1d4dc', autoScale: true, scaleMargins: { top: 0.06, bottom: 0.06 } },
-      timeScale: { borderColor: '#d1d4dc', timeVisible: true, secondsVisible: false, rightOffset: 25, barSpacing: 4.5 },
-      crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
-    });
-
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#228b22', downColor: '#dc143c',
-      borderUpColor: '#228b22', borderDownColor: '#dc143c',
-      wickUpColor: '#228b22', wickDownColor: '#dc143c'
-    });
+    // اتصال مستقیم به وب‌سایت رسمی متاتریدر ۵ با نماد و تایم‌فریم سیگنال
+    const mt5Url = `https://trade.mql5.com/trade?servers=&trade_server=&symbol=${encodeURIComponent(sym)}&period=${encodeURIComponent(tf)}`;
+    document.getElementById('mt5Frame').src = mt5Url;
+    document.getElementById('openFullMt5').href = mt5Url;
 
     let precision = 5;
     if (sym.includes('JPY')) precision = 3;
     else if (sym.includes('XAU') || sym.includes('GOLD') || sym.includes('US30') || sym.includes('NAS') || sym.includes('SPX') || sym.includes('OIL')) precision = 2;
     else if (sym.includes('XAG')) precision = 3;
 
-    candleSeries.applyOptions({
-      priceFormat: { type: 'price', precision: precision, minMove: Math.pow(10, -precision) }
-    });
+    const rulerList = document.getElementById('rulerList');
+    const items = [];
 
-    const stepColor = isBuy ? '#1e88e5' : '#c2185b';
-    const rfColor = '#b8860b';
-    const levelsBar = document.getElementById('levelsBar');
-
-    const allPrices = [];
     for (let i = 1; i <= 7; i++) {
       const val = parseFloat(params.get('s' + i));
       if (!isNaN(val) && val > 0) {
-        allPrices.push(val);
-        candleSeries.createPriceLine({
-          price: val,
-          color: stepColor,
-          lineWidth: 2,
-          lineStyle: LightweightCharts.LineStyle.Solid,
-          axisLabelVisible: true,
-          title: `پله ${i}`
-        });
-
-        const chip = document.createElement('div');
-        chip.className = 'lvl-chip';
-        chip.innerHTML = `<strong>پله ${i}:</strong> ${val.toFixed(precision)}`;
-        levelsBar.appendChild(chip);
+        items.push({ type: 'step', label: `پله ${i}`, price: val });
       }
     }
-
     for (let i = 2; i <= 7; i++) {
       const rfVal = parseFloat(params.get('rf' + i));
       if (!isNaN(rfVal) && rfVal > 0) {
-        allPrices.push(rfVal);
-        candleSeries.createPriceLine({
-          price: rfVal,
-          color: rfColor,
-          lineWidth: 2,
-          lineStyle: LightweightCharts.LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: `تی‌پی / RF ${i}`
-        });
-
-        const rfChip = document.createElement('div');
-        rfChip.className = 'lvl-chip rf';
-        rfChip.innerHTML = `<strong>تی‌پی / RF ${i}:</strong> ${rfVal.toFixed(precision)}`;
-        levelsBar.appendChild(rfChip);
+        items.push({ type: 'rf', label: `تی‌پی / RF ${i}`, price: rfVal });
       }
     }
-
     const riskVal = parseFloat(params.get('risk'));
     if (!isNaN(riskVal) && riskVal > 0) {
-      candleSeries.createPriceLine({
-        price: riskVal,
-        color: '#d32f2f',
-        lineWidth: 2,
-        lineStyle: LightweightCharts.LineStyle.LargeDashed,
-        axisLabelVisible: true,
-        title: 'حد ریسک'
-      });
-
-      const rChip = document.createElement('div');
-      rChip.className = 'lvl-chip risk';
-      rChip.innerHTML = `حد ریسک: ${riskVal.toFixed(precision)}`;
-      levelsBar.appendChild(rChip);
+      items.push({ type: 'risk', label: 'حد ریسک', price: riskVal });
     }
 
-    if (allPrices.length > 0) {
-      const minStep = Math.min(...allPrices);
-      const maxStep = Math.max(...allPrices);
-      candleSeries.applyOptions({
-        autoscaleInfoProvider: original => {
-          const res = original();
-          if (res !== null) {
-            res.priceRange.minValue = Math.min(res.priceRange.minValue, minStep);
-            res.priceRange.maxValue = Math.max(res.priceRange.maxValue, maxStep);
-          }
-          return res;
-        }
-      });
+    // مرتب‌سازی خطوط بر اساس قیمت از بالا به پایین دقیقاً مثل چارت
+    items.sort((a, b) => b.price - a.price);
+
+    function copyPrice(valStr) {
+      navigator.clipboard.writeText(valStr);
+      const st = document.getElementById('copyStatus');
+      st.innerText = 'کپی شد!';
+      setTimeout(() => { st.innerText = ''; }, 1200);
     }
 
-    function getStepSeconds(t) {
-      const map = { 'M1': 60, 'M5': 300, 'M15': 900, 'M30': 1800, 'H1': 3600, 'H4': 14400, 'D1': 86400 };
-      return map[t] || 900;
-    }
+    items.forEach(it => {
+      const row = document.createElement('div');
+      let cls = 'r-line ';
+      if (it.type === 'step') cls += isBuy ? 'r-step-buy' : 'r-step-sell';
+      else if (it.type === 'rf') cls += 'r-rf';
+      else cls += 'r-risk';
 
-    // دریافت نرخ لحظه‌ای مستقیم بدون پروکسی واسط
-    async function fetchDirectSpotRate(symbol) {
-      if (symbol.length !== 6) return null;
-      const base = symbol.substring(0, 3);
-      const quote = symbol.substring(3, 6);
-      try {
-        const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
-        const data = await res.json();
-        if (data && data.rates && data.rates[quote]) {
-          return data.rates[quote];
-        }
-      } catch (e) {}
-      return null;
-    }
-
-    // تولید ۲۵۰ کندل ساختاری منطبق با قیمت واقعی و سطح پله ۱ تا لحظه بارگذاری
-    function buildInstantCandles(currentPrice, step1Price) {
-      const count = 250;
-      const tfSec = getStepSeconds(tf);
-      const now = Math.floor(Date.now() / tfSec) * tfSec;
-      const candles = [];
-
-      const startPrice = isBuy ? (step1Price + Math.abs(currentPrice - step1Price) * 1.4) : (step1Price - Math.abs(currentPrice - step1Price) * 1.4);
-      const volatility = Math.max(Math.abs(currentPrice - step1Price) * 0.12, Math.pow(10, -precision) * 15);
-
-      let price = startPrice || currentPrice;
-      let seed = sym.split('').reduce((a, b) => a + b.charCodeAt(0), 0) + count;
-      function pseudoRand() {
-        seed = (seed * 9301 + 49297) % 233280;
-        return seed / 233280;
-      }
-
-      for (let i = count; i >= 1; i--) {
-        const t = now - (i * tfSec);
-        const progress = (count - i) / count;
-        const target = startPrice + (currentPrice - startPrice) * progress;
-        const wave = Math.sin(i * 0.22) * volatility * 1.8;
-        const open = price;
-        const close = (i === 1) ? currentPrice : (target + wave + (pseudoRand() - 0.5) * volatility);
-        const high = Math.max(open, close) + pseudoRand() * volatility * 0.8;
-        const low = Math.min(open, close) - pseudoRand() * volatility * 0.8;
-
-        candles.push({
-          time: t,
-          open: Number(open.toFixed(precision)),
-          high: Number(high.toFixed(precision)),
-          low: Number(low.toFixed(precision)),
-          close: Number(close.toFixed(precision))
-        });
-        price = close;
-      }
-      return candles;
-    }
-
-    let liveCandles = [];
-
-    function resetChartZoom() {
-      chart.timeScale().setVisibleLogicalRange({ from: 0, to: 265 });
-    }
-
-    async function initChart() {
-      const s1 = parseFloat(params.get('s1'));
-      let spot = await fetchDirectSpotRate(sym);
-      if (!spot) spot = !isNaN(s1) && s1 > 0 ? s1 : 1.0000;
-
-      liveCandles = buildInstantCandles(spot, !isNaN(s1) && s1 > 0 ? s1 : spot);
-      candleSeries.setData(liveCandles);
-      resetChartZoom();
-
-      setInterval(async () => {
-        const latest = await fetchDirectSpotRate(sym);
-        if (latest && liveCandles.length > 0) {
-          const last = liveCandles[liveCandles.length - 1];
-          last.close = Number(latest.toFixed(precision));
-          last.high = Math.max(last.high, last.close);
-          last.low = Math.min(last.low, last.close);
-          candleSeries.update(last);
-        }
-      }, 5000);
-    }
-
-    initChart();
-
-    window.addEventListener('resize', () => {
-      chart.resize(container.clientWidth, container.clientHeight);
+      const pStr = it.price.toFixed(precision);
+      row.className = cls;
+      row.onclick = () => copyPrice(pStr);
+      row.innerHTML = `<span><strong>${it.label}</strong></span><span><code>${pStr}</code> <span class="copy-tag">کپی</span></span>`;
+      rulerList.appendChild(row);
     });
   </script>
 </body>
